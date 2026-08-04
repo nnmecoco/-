@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PAIRLIST</title>
+<style>
+:root{
+  --bg:#0f0f0f; --panel:#181818; --panel2:#212121; --line:#303030;
+  --text:#f1f1f1; --muted:#aaa; --accent:#ff3b6b; --accent-soft:#32171b;
+  --input:#101010; --button:#272727; --sidebar:#0b0b0b; --control-bg:#0d0d0d;
+}
+body.light{
+  --bg:#f9f9f9; --panel:#ffffff; --panel2:#f2f2f2; --line:#d8d8d8;
+  --text:#0f0f0f; --muted:#606060; --accent-soft:#ffe8ee;
+  --input:#ffffff; --button:#ededed; --sidebar:#ffffff; --control-bg:#f4f4f4;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,"Apple SD Gothic Neo","Noto Sans KR",sans-serif}
+.app{display:grid;grid-template-columns:78px 650px 1fr;min-height:100vh}
+.sidebar{border-right:1px solid var(--line);background:var(--sidebar);padding:18px 10px;display:flex;flex-direction:column;align-items:center;gap:28px}
+.side-item{font-size:11px;color:var(--muted);text-align:center}
+.side-icon{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--line);margin:auto auto 6px}
+.side-item.active{color:var(--text)}.side-item.active .side-icon{color:var(--accent);border-color:#555}
+.controls{padding:24px;border-right:1px solid var(--line);overflow:auto;background:var(--control-bg)}
+.brand h1{margin:0;font-size:25px;letter-spacing:.5px}
+.brand p{margin:5px 0 18px;color:var(--muted);font-size:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:15px;margin-bottom:12px}
+.card h2{font-size:13px;margin:0 0 12px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label{font-size:11px;color:var(--text);display:block;margin-bottom:6px}
+input,textarea,select{width:100%;background:var(--input);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:10px}
+textarea{resize:vertical;min-height:78px}
+.segment{display:flex;gap:8px}
+.segment button{flex:1;background:var(--input);border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:10px;cursor:pointer}
+.segment .active{border-color:var(--accent);background:var(--accent-soft);color:var(--text)}
+.upload{border:1px dashed var(--line);border-radius:10px;padding:11px;text-align:center;cursor:pointer}
+.upload input{display:none}
+.crop-grid-wrap{display:none}
+.preview-editor-bar{
+  display:none;align-items:center;justify-content:space-between;gap:12px;
+  margin-top:10px;padding:10px 12px;border:1px solid var(--line);
+  border-radius:10px;background:var(--panel)
+}
+.preview-editor-bar.active{display:flex}
+.preview-editor-left,.preview-editor-right{display:flex;align-items:center;gap:8px}
+.preview-editor-bar button{
+  border:1px solid var(--line);background:var(--panel2);color:var(--text);
+  border-radius:8px;padding:7px 11px;cursor:pointer
+}
+.preview-editor-bar button.active{
+  border-color:var(--accent);background:var(--accent-soft);color:var(--text)
+}
+.preview-editor-bar input[type="range"]{width:170px;padding:0}
+.video{position:relative}
+.video.editing canvas{cursor:grab}
+.video.editing.dragging canvas{cursor:grabbing}
+.edit-badge{
+  position:absolute;left:14px;top:14px;z-index:1;display:none;
+  padding:7px 10px;border-radius:8px;background:rgba(0,0,0,.68);
+  color:#fff;font-size:12px;pointer-events:none
+}
+.video.editing .edit-badge{display:block}
+.video-grid{
+  position:absolute;inset:0;pointer-events:none;display:none;
+  background:
+  linear-gradient(to right,transparent 33.2%,rgba(255,255,255,.32) 33.3%,rgba(255,255,255,.32) 33.55%,transparent 33.65%,transparent 66.35%,rgba(255,255,255,.32) 66.45%,rgba(255,255,255,.32) 66.7%,transparent 66.8%),
+  linear-gradient(to bottom,transparent 33.2%,rgba(255,255,255,.32) 33.3%,rgba(255,255,255,.32) 33.55%,transparent 33.65%,transparent 66.35%,rgba(255,255,255,.32) 66.45%,rgba(255,255,255,.32) 66.7%,transparent 66.8%);
+}
+.video.editing .video-grid{display:block}
+.crop-box{display:none}
+.crop-box.active{display:block}
+.crop-label{display:flex;justify-content:space-between;font-size:11px;margin-bottom:6px;color:var(--muted)}
+.crop-stage{position:relative;aspect-ratio:1/1;overflow:hidden;border-radius:8px;background:#050505;border:1px solid #333;cursor:grab;touch-action:none}
+.crop-stage img{position:absolute;left:50%;top:50%;max-width:none;pointer-events:none;user-select:none}
+.crop-grid{position:absolute;inset:0;pointer-events:none;background:
+linear-gradient(to right,transparent 33.2%,rgba(255,255,255,.35) 33.3%,rgba(255,255,255,.35) 33.7%,transparent 33.8%,transparent 66.2%,rgba(255,255,255,.35) 66.3%,rgba(255,255,255,.35) 66.7%,transparent 66.8%),
+linear-gradient(to bottom,transparent 33.2%,rgba(255,255,255,.35) 33.3%,rgba(255,255,255,.35) 33.7%,transparent 33.8%,transparent 66.2%,rgba(255,255,255,.35) 66.3%,rgba(255,255,255,.35) 66.7%,transparent 66.8%)}
+.crop-tools{display:grid;grid-template-columns:1fr auto;gap:7px;margin-top:7px}
+.crop-tools input{padding:0}
+.mini{background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:7px;padding:7px 10px}
+.primary{width:100%;border:0;border-radius:9px;padding:13px;font-weight:700;color:#fff;background:var(--accent);cursor:pointer}
+.secondary{width:100%;margin-top:8px;background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:11px;cursor:pointer}
+.hint{font-size:10px;color:var(--muted);margin-top:6px;line-height:1.4}
+.err{font-size:11px;color:#ff7777;margin-top:7px;display:none}
+.preview{padding:18px 26px;overflow:auto;background:var(--bg)}
+.yt-top{height:56px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:18px;position:sticky;top:0;background:var(--bg);z-index:2}
+.yt-logo{font-weight:800;font-size:20px}
+.search{flex:1;max-width:620px;display:flex}
+.search input{border-radius:20px 0 0 20px;padding-left:18px}
+.search button{width:55px;border:1px solid var(--line);border-left:0;border-radius:0 20px 20px 0;background:var(--panel2);color:var(--text)}
+.video{margin-top:24px;aspect-ratio:16/9;background:#111;border-radius:12px;overflow:hidden}
+canvas{width:100%;height:100%;display:block}
+.video-title{font-size:22px;font-weight:700;margin:16px 0 8px}
+.meta{color:var(--muted);font-size:13px}
+.channel-row{display:flex;align-items:center;justify-content:space-between;margin-top:18px;gap:14px}
+.channel-left{display:flex;align-items:center;gap:12px}
+.avatar{width:42px;height:42px;border-radius:50%;background:var(--panel2);border:1px solid var(--line)}
+.ch-name{font-weight:700}.ch-sub{font-size:12px;color:var(--muted);margin-top:3px}
+.subscribe{border:0;border-radius:22px;padding:11px 20px;font-weight:700}
+.actions{display:flex;gap:8px;margin:14px 0 18px}
+.actions button{background:var(--button);border:0;color:var(--text);border-radius:20px;padding:9px 15px}
+.comments{border-top:1px solid var(--line);padding-top:18px}
+.comment-head{font-weight:700;margin-bottom:18px}
+.comment{display:grid;grid-template-columns:40px 1fr;gap:10px}
+.pin{font-size:11px;color:var(--muted);margin-bottom:8px}
+.comment-author{font-size:12px;margin-bottom:10px}
+.tracklist{font-size:13px;line-height:1.65;white-space:pre-wrap}
+.time{color:var(--accent)}
+.info-card{margin-top:18px;border:1px solid var(--line);border-radius:10px;padding:15px;background:var(--panel)}
+.info-card h3{font-size:13px;margin-top:0}
+.info-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.info-item{font-size:11px;color:var(--muted)}.info-item b{display:block;color:var(--text);margin-top:4px;font-size:12px}
+.theme-controls{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.font-controls{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.font-size-controls{display:flex;align-items:center;gap:8px}
+.font-size-controls button{
+  width:36px;height:36px;border:1px solid var(--line);border-radius:8px;
+  background:var(--panel2);color:var(--text);font-size:20px;cursor:pointer
+}
+.font-size-value{
+  min-width:54px;text-align:center;font-size:12px;color:var(--muted)
+}
+.text-preset-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.text-toggle-row{display:flex;gap:8px}
+.text-toggle-row button{
+  flex:1;border:1px solid var(--line);background:var(--panel2);color:var(--muted);
+  border-radius:8px;padding:9px;cursor:pointer
+}
+.text-toggle-row button.active{
+  border-color:var(--accent);background:var(--accent-soft);color:var(--text)
+}
+.color-row{display:flex;align-items:center;gap:10px}
+.color-row input[type="color"]{width:52px;height:38px;padding:3px;cursor:pointer}
+.swatches{display:flex;gap:7px;flex-wrap:wrap}
+.swatch{width:28px;height:28px;border-radius:50%;border:2px solid rgba(127,127,127,.45);cursor:pointer}
+.swatch.active{outline:2px solid var(--text);outline-offset:2px}
+.subscribe{background:var(--accent);color:white}
+@media(max-width:1200px){.app{grid-template-columns:70px 520px 1fr}}
+@media(max-width:920px){.app{grid-template-columns:1fr}.sidebar{display:none}.controls{border-right:0}.preview{padding:18px}.crop-grid-wrap{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="side-item"><div class="side-icon">⌂</div>홈</div>
+    <div class="side-item"><div class="side-icon">▶</div>탐색</div>
+    <div class="side-item active"><div class="side-icon">＋</div>만들기</div>
+    <div class="side-item"><div class="side-icon">◴</div>기록</div>
+  </aside>
+
+  <section class="controls">
+    <div class="brand"><h1>PAIRLIST ✦</h1><p>캐릭터 관계 플레이리스트 제작기</p></div>
+
+
+    <div class="card">
+      <h2>0. 화면 디자인</h2>
+      <div class="theme-controls">
+        <div>
+          <label>테마</label>
+          <select id="themeMode">
+            <option value="dark">다크 모드</option>
+            <option value="light">라이트 모드</option>
+          </select>
+        </div>
+        <div>
+          <label>포인트 컬러</label>
+          <div class="color-row">
+            <input id="accentColor" type="color" value="#ff3b6b">
+            <span id="accentHex" class="hint" style="margin:0">#ff3b6b</span>
+          </div>
+        </div>
+      </div>
+      <div style="height:10px"></div>
+      <label>추천 색상</label>
+      <div class="swatches">
+        <button class="swatch active" type="button" data-color="#ff3b6b" style="background:#ff3b6b" title="핑크 레드"></button>
+        <button class="swatch" type="button" data-color="#ff0000" style="background:#ff0000" title="유튜브 레드"></button>
+        <button class="swatch" type="button" data-color="#6f5cff" style="background:#6f5cff" title="바이올렛"></button>
+        <button class="swatch" type="button" data-color="#3ea6ff" style="background:#3ea6ff" title="블루"></button>
+        <button class="swatch" type="button" data-color="#00b894" style="background:#00b894" title="민트"></button>
+        <button class="swatch" type="button" data-color="#f4b400" style="background:#f4b400" title="옐로"></button>
+      </div>
+      <div class="text-preset-grid">
+        <div>
+          <label>글씨 프리셋</label>
+          <select id="textPreset">
+            <option value="serif">세리프 · 명조</option>
+            <option value="sans">산세리프 · 고딕</option>
+          </select>
+        </div>
+        <div>
+          <label>글씨 위치</label>
+          <select id="textPosition">
+            <option value="top">위</option>
+            <option value="middle" selected>중간</option>
+            <option value="bottom">아래</option>
+          </select>
+        </div>
+      </div>
+      <div class="text-preset-grid">
+        <div>
+          <label>글씨 표시</label>
+          <div class="text-toggle-row">
+            <button id="textOn" type="button" class="active">켜기</button>
+            <button id="textOff" type="button">끄기</button>
+          </div>
+        </div>
+        <div>
+          <label>글자 크기</label>
+          <div class="font-size-controls">
+            <button id="fontMinus" type="button" aria-label="글자 작게">−</button>
+            <span id="fontSizeValue" class="font-size-value">100%</span>
+            <button id="fontPlus" type="button" aria-label="글자 크게">＋</button>
+          </div>
+        </div>
+      </div>
+      <div style="height:10px"></div>
+      <label>페어명</label>
+      <input id="pairName" value="A × B" placeholder="예: Teo × Noa">
+      <div style="height:10px"></div>
+      <label>플레이리스트 제목</label>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="white-space:nowrap;color:var(--muted);font-size:12px">[Playlist]</span>
+        <input id="playlistTitleInput" value="A × B" placeholder="예: 여름의 끝">
+      </div>
+      <div style="height:10px"></div>
+      <label>캐치프레이즈</label>
+      <input id="catchphrase" value="우리는 결국, 서로에게 돌아오게 되어있었다." placeholder="제목 아래에 들어갈 문구">
+    </div>
+
+    <div class="card">
+      <h2>1. 모드 선택</h2>
+      <div class="segment">
+        <button id="pairBtn" class="active">페어 (A × B)</button>
+        <button id="singleBtn">단일 캐릭터</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>2. 이미지 업로드 & 크롭</h2>
+      <label class="upload">이미지 선택 (최대 2장)<input id="imageInput" type="file" accept="image/*" multiple></label>
+      <div class="hint">업로드 후 오른쪽 영상 미리보기에서 이미지를 직접 드래그하고, 마우스 휠로 확대·축소하세요.</div>
+      <div class="crop-grid-wrap">
+        <div id="cropBox1" class="crop-box">
+          <div class="crop-label"><span>A</span><span>드래그 · 휠 확대</span></div>
+          <div id="cropStage1" class="crop-stage"><img id="cropImg1"><div class="crop-grid"></div></div>
+          <div class="crop-tools"><input id="zoom1" type="range" min="1" max="5" step=".01" value="1"><button id="reset1" class="mini">초기화</button></div>
+        </div>
+        <div id="cropBox2" class="crop-box">
+          <div class="crop-label"><span>B</span><span>드래그 · 휠 확대</span></div>
+          <div id="cropStage2" class="crop-stage"><img id="cropImg2"><div class="crop-grid"></div></div>
+          <div class="crop-tools"><input id="zoom2" type="range" min="1" max="5" step=".01" value="1"><button id="reset2" class="mini">초기화</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>3. 캐릭터 & 관계 설명</h2>
+      <div class="row">
+        <div><label>캐릭터 A</label><input id="nameA" value="A"></div>
+        <div id="nameBWrap"><label>캐릭터 B</label><input id="nameB" value="B"></div>
+      </div>
+      <div style="height:9px"></div>
+      <label>관계와 서사</label>
+      <textarea id="desc">서로를 이해하지 못하면서도 결국 가장 깊이 의존하는 관계. 배신과 재회가 있고, 미련과 죄책감이 오래 남는다.</textarea>
+    </div>
+
+    <div class="card">
+      <h2>4. 플레이리스트 설정</h2>
+      <div class="row">
+        <div><label>분위기</label><select id="mood"><option>멜랑콜리 / 애틋함</option><option>청춘 / 여름</option><option>퇴폐 / 위험</option><option>따뜻함 / 안정</option></select></div>
+        <div><label>언어</label><select id="language"><option>한국어 + 영어</option><option>한국어</option><option>영어</option><option>일본어</option></select></div>
+      </div>
+      <div style="height:9px"></div>
+      <div class="row">
+        <div><label>장르</label><select id="genre"><option>인디 / 얼터너티브</option><option>록</option><option>R&B</option><option>팝</option><option>AI에게 맡기기</option></select></div>
+        <div><label>곡 수</label><select id="count"><option>10</option><option selected>15</option><option>20</option></select></div>
+      </div>
+      <div style="height:9px"></div>
+      <label>첫 곡 지정 (선택)</label>
+      <input id="firstSong" placeholder="노래 제목 — 가수">
+    </div>
+
+    <div class="card">
+      <h2>5. ChatGPT 연동 (API 불필요)</h2>
+      <div class="row">
+        <div><label>AI 모델</label><select id="provider"><option value="gemini">Gemini API</option><option value="openai">OpenAI API</option></select></div>
+        <div><label>모델명</label><input id="modelName" value="gemini-2.5-flash"></div>
+      </div>
+      <div style="height:9px"></div>
+      <label>ChatGPT Plus 사용</label><input id="apiKey" type="password" autocomplete="off" placeholder="API 키 필요 없음">
+      <div class="hint">추천받기 버튼을 누르면 프롬프트를 복사하고 ChatGPT를 새 탭으로 엽니다.</div>
+      <div id="error" class="err"></div>
+    </div>
+
+    <button id="generateBtn" class="primary">✨ ChatGPT에서 추천받기</button>
+    <button id="downloadBtn" class="secondary">댓글까지 PNG 저장</button>
+    <div class="card" style="margin-top:12px">
+      <h2>6. ChatGPT 결과 붙여넣기</h2>
+      <textarea id="aiResult" placeholder='[
+{"title":"곡 제목","artist":"가수"}
+]'></textarea>
+      <button id="applyBtn" class="secondary">플레이리스트 적용</button>
+      <div class="hint">ChatGPT가 반환한 JSON 배열을 그대로 붙여넣으면 됩니다.</div>
+    </div>
+
+  </section>
+
+  <main class="preview">
+    <div class="yt-top"><div>☰</div><div class="yt-logo">▶ YouTube</div><div class="search"><input placeholder="검색"><button>⌕</button></div><div>◉</div><div>＋</div><div>🔔</div></div>
+
+    <div id="videoBox" class="video">
+      <canvas id="canvas" width="1280" height="720"></canvas>
+      <div id="editBadge" class="edit-badge">이미지 A 편집 중 · 드래그 이동 / 휠 확대</div>
+      <div class="video-grid"></div>
+    </div>
+    <div id="previewEditor" class="preview-editor-bar">
+      <div class="preview-editor-left">
+        <b>미리보기에서 이미지 조정</b>
+        <button id="selectImageA" type="button" class="active">이미지 A</button>
+        <button id="selectImageB" type="button">이미지 B</button>
+      </div>
+      <div class="preview-editor-right">
+        <span class="hint" style="margin:0">축소</span>
+        <input id="previewZoom" type="range" min="1" max="5" step=".01" value="1">
+        <span class="hint" style="margin:0">확대</span>
+        <button id="previewReset" type="button">초기화</button>
+      </div>
+    </div>
+    <div id="videoTitle" class="video-title">A × B Playlist</div>
+    <div class="meta">조회수 142,785회 · 5개월 전</div>
+
+    <div class="channel-row">
+      <div class="channel-left">
+        <div class="avatar"></div>
+        <div><div class="ch-name">nnme_archive</div><div class="ch-sub">@nnme_archive · 구독자 8.7만명<br>익명의 아카이브</div></div>
+      </div>
+      <button class="subscribe">구독</button>
+    </div>
+
+    <div class="actions"><button>👍 3.2천</button><button>👎</button><button>↗ 공유</button><button>▣ 저장</button><button>•••</button></div>
+
+    <div class="comments">
+      <div class="comment-head">댓글 127개</div>
+      <div class="comment">
+        <div class="avatar"></div>
+        <div>
+          <div class="pin">📌 고정됨</div>
+          <div class="comment-author"><b>nnme_archive</b> · 5개월 전</div>
+          <div id="tracklist" class="tracklist"></div>
+        </div>
+      </div>
+
+      <div class="info-card">
+        <h3>PLAYLIST INFO</h3>
+        <div class="info-grid">
+          <div class="info-item">MOOD<b id="infoMood">멜랑콜리 / 애틋함</b></div>
+          <div class="info-item">GENRE<b id="infoGenre">인디 / 얼터너티브</b></div>
+          <div class="info-item">LANGUAGE<b id="infoLang">한국어 + 영어</b></div>
+          <div class="info-item">SONGS<b id="infoCount">15곡</b></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+const canvas=document.getElementById('canvas'),ctx=canvas.getContext('2d');
+let mode='pair',images=[],cropStates=[],generatedSongs=[],activePreviewImage=0,fontScale=1,textVisible=true;
+const demo=[
+['Sweater Weather','The Neighbourhood'],['Nothing’s Gonna Hurt You Baby','Cigarettes After Sex'],
+['bad','wave to earth'],['Warm On A Cold Night','HONNE'],['Romantic Homicide','d4vd'],
+['Glue Song','beabadoobee'],['Anchor','Novo Amor'],['when the party’s over','Billie Eilish'],
+['anything','Adrianne Lenker'],['2 soon','keshi'],['Lovers Rock','TV Girl'],['seasons','wave to earth'],
+['Apocalypse','Cigarettes After Sex'],['A Pearl','Mitski'],['505','Arctic Monkeys']
+];
+function fit(t,n){return t.length>n?t.slice(0,n-1)+'…':t}
+function drawCropped(img,state,x,y,w,h){
+  const ir=img.width/img.height,rr=w/h,base=ir>rr?h/img.height:w/img.width,z=state?.zoom||1;
+  const dw=img.width*base*z,dh=img.height*base*z,maxX=Math.max(0,(dw-w)/2),maxY=Math.max(0,(dh-h)/2);
+  ctx.drawImage(img,x+w/2-dw/2+(state?.nx||0)*maxX,y+h/2-dh/2+(state?.ny||0)*maxY,dw,dh)
+}
+function drawCanvas(){
+  ctx.fillStyle='#101010';ctx.fillRect(0,0,1280,720);
+  if(mode==='single' && images[0]) drawCropped(images[0],cropStates[0],0,0,1280,720);
+  else if(images.length===1) drawCropped(images[0],cropStates[0],0,0,1280,720);
+  else if(images.length>1){drawCropped(images[0],cropStates[0],0,0,640,720);drawCropped(images[1],cropStates[1],640,0,640,720)}
+  else{
+    const g=ctx.createLinearGradient(0,0,1280,720);g.addColorStop(0,'#25252b');g.addColorStop(1,'#0f1117');
+    ctx.fillStyle=g;ctx.fillRect(0,0,1280,720)
+  }
+  if(textVisible){
+    const shade=ctx.createLinearGradient(0,0,0,720);
+    shade.addColorStop(0,'rgba(0,0,0,.12)');
+    shade.addColorStop(1,'rgba(0,0,0,.72)');
+    ctx.fillStyle=shade;
+    ctx.fillRect(0,0,1280,720);
+  }
+  const a=document.getElementById('nameA').value||'A',b=document.getElementById('nameB').value||'B';
+  const fallbackTitle=mode==='pair'?`${a} × ${b}`:a;
+  const title=(playlistTitleInput.value||fallbackTitle).trim();
+  const serifStack='"BookkMyungjo","KoPubWorldBatang","Noto Serif KR","Nanum Myeongjo",serif';
+  const sansStack='"Pretendard","Noto Sans KR","Apple SD Gothic Neo",Arial,sans-serif';
+  const thumbFont=textPreset.value==='serif'?serifStack:sansStack;
+  const posMap={
+    top:{label:145,title:245,catch:305},
+    middle:{label:295,title:400,catch:455},
+    bottom:{label:455,title:555,catch:615}
+  };
+  const pos=posMap[textPosition.value]||posMap.middle;
+  if(textVisible){
+    ctx.textAlign='center';ctx.fillStyle='#fff';
+    ctx.font=`${Math.round(24*fontScale)}px ${thumbFont}`;ctx.fillText('P L A Y L I S T',640,pos.label);
+    ctx.font=`700 ${Math.round(92*fontScale)}px ${thumbFont}`;ctx.fillText(title,640,pos.title);
+    const phrase=(catchphrase.value||'').trim();
+    if(phrase){
+      ctx.font=`${Math.round(26*fontScale)}px ${thumbFont}`;
+      ctx.fillText(`“${phrase}”`,640,pos.catch);
+    }
+  }
+  ctx.textAlign='left';ctx.font='24px Arial';ctx.fillStyle='white';ctx.fillText('1:13:42',1160,680)
+}
+
+let pairNameTouched=false;
+let playlistTitleTouched=false;
+pairName.addEventListener('input',()=>{pairNameTouched=true;refreshText()});
+playlistTitleInput.addEventListener('input',()=>{playlistTitleTouched=true;drawCanvas();refreshText()});
+function syncNamesFromCharacters(){
+  const a=nameA.value||'A',b=nameB.value||'B';
+  const fallback=mode==='pair'?`${a} × ${b}`:a;
+  if(!pairNameTouched) pairName.value=fallback;
+  if(!playlistTitleTouched) playlistTitleInput.value=fallback;
+}
+
+function refreshText(){
+  const a=nameA.value||'A',b=nameB.value||'B';
+  const fallbackTitle=mode==='pair'?`${a} × ${b}`:a;
+  const pTitle=(playlistTitleInput.value||fallbackTitle).trim();
+  const pName=(pairName.value||fallbackTitle).trim();
+  videoTitle.textContent=`[Playlist] ${pTitle}`;
+  infoMood.textContent=mood.value;infoGenre.textContent=genre.value;infoLang.textContent=language.value;infoCount.textContent=count.value+'곡';
+  const songs=generatedSongs.length?generatedSongs:demo.slice(0,parseInt(count.value));
+  let sec=0;
+  const lines=songs.map((s,i)=>{const m=Math.floor(sec/60),ss=String(sec%60).padStart(2,'0');sec+=220+(i%4)*27;return `<span class="time">${String(m).padStart(2,'0')}:${ss}</span>  ${s[0]} — ${s[1]}`});
+  tracklist.innerHTML=`<b>${pName}</b>\n\n`+lines.join('\n')
+}
+
+function syncCrop(i){
+  // Legacy crop controls are hidden. Keep the state synchronized with the live preview editor.
+  if(i===activePreviewImage && cropStates[i]){
+    previewZoom.value=cropStates[i].zoom;
+  }
+  updatePreviewEditor();
+}
+function updatePreviewEditor(){
+  const hasAny=images.filter(Boolean).length>0;
+  previewEditor.classList.toggle('active',hasAny);
+  videoBox.classList.toggle('editing',hasAny);
+  selectImageA.style.display=images[0]?'inline-block':'none';
+  selectImageB.style.display=(mode==='pair' && images[1])?'inline-block':'none';
+  if(mode==='single') activePreviewImage=0;
+  if(!images[activePreviewImage]) activePreviewImage=images[0]?0:1;
+  selectImageA.classList.toggle('active',activePreviewImage===0);
+  selectImageB.classList.toggle('active',activePreviewImage===1);
+  const label=activePreviewImage===0?'A':'B';
+  editBadge.textContent=`이미지 ${label} 편집 중 · 드래그 이동 / 휠 확대`;
+  if(cropStates[activePreviewImage]) previewZoom.value=cropStates[activePreviewImage].zoom;
+}
+function setActivePreviewImage(index){
+  if(!images[index]) return;
+  activePreviewImage=index;
+  updatePreviewEditor();
+}
+function resetPreviewCrop(){
+  const st=cropStates[activePreviewImage];
+  if(!st) return;
+  st.zoom=1; st.nx=0; st.ny=0;
+  previewZoom.value=1;
+  drawCanvas();
+}
+function setupPreviewEditing(){
+  let dragging=false,lastX=0,lastY=0;
+
+  canvas.addEventListener('pointerdown',e=>{
+    if(!images.length) return;
+    const rect=canvas.getBoundingClientRect();
+    if(mode==='pair' && images.length>1){
+      const localX=e.clientX-rect.left;
+      setActivePreviewImage(localX<rect.width/2?0:1);
+    }else{
+      setActivePreviewImage(0);
+    }
+    dragging=true; lastX=e.clientX; lastY=e.clientY;
+    videoBox.classList.add('dragging');
+    canvas.setPointerCapture(e.pointerId);
+  });
+
+  canvas.addEventListener('pointermove',e=>{
+    if(!dragging) return;
+    const st=cropStates[activePreviewImage],img=images[activePreviewImage];
+    if(!st||!img) return;
+
+    const rect=canvas.getBoundingClientRect();
+    const areaW=(mode==='pair' && images.length>1?rect.width/2:rect.width);
+    const areaH=rect.height;
+    const ir=img.width/img.height, rr=areaW/areaH;
+    const base=ir>rr?areaH/img.height:areaW/img.width;
+    const dw=img.width*base*st.zoom, dh=img.height*base*st.zoom;
+    const maxX=Math.max(1,(dw-areaW)/2), maxY=Math.max(1,(dh-areaH)/2);
+
+    st.nx=Math.max(-1,Math.min(1,st.nx+(e.clientX-lastX)/maxX));
+    st.ny=Math.max(-1,Math.min(1,st.ny+(e.clientY-lastY)/maxY));
+    lastX=e.clientX; lastY=e.clientY;
+    drawCanvas();
+  });
+
+  const stop=()=>{dragging=false;videoBox.classList.remove('dragging')};
+  canvas.addEventListener('pointerup',stop);
+  canvas.addEventListener('pointercancel',stop);
+
+  canvas.addEventListener('wheel',e=>{
+    if(!images.length) return;
+    e.preventDefault();
+    const rect=canvas.getBoundingClientRect();
+    if(mode==='pair' && images.length>1){
+      setActivePreviewImage((e.clientX-rect.left)<rect.width/2?0:1);
+    }else{
+      setActivePreviewImage(0);
+    }
+    const st=cropStates[activePreviewImage];
+    if(!st) return;
+    st.zoom=Math.max(1,Math.min(5,st.zoom+(e.deltaY<0?.12:-.12)));
+    previewZoom.value=st.zoom;
+    drawCanvas();
+  },{passive:false});
+
+  canvas.addEventListener('dblclick',resetPreviewCrop);
+  previewZoom.addEventListener('input',()=>{
+    const st=cropStates[activePreviewImage];
+    if(!st) return;
+    st.zoom=parseFloat(previewZoom.value);
+    drawCanvas();
+  });
+  previewReset.addEventListener('click',resetPreviewCrop);
+  selectImageA.addEventListener('click',()=>setActivePreviewImage(0));
+  selectImageB.addEventListener('click',()=>setActivePreviewImage(1));
+}
+
+imageInput.onchange=e=>{
+  images=[];cropStates=[];
+  [...e.target.files].slice(0,2).forEach((file,i)=>{const r=new FileReader();r.onload=ev=>{const img=new Image();img.onload=()=>{images[i]=img;cropStates[i]={src:ev.target.result,zoom:1,nx:0,ny:0};activePreviewImage=i===0?0:activePreviewImage;syncCrop(i);drawCanvas();updatePreviewEditor()};img.src=ev.target.result};r.readAsDataURL(file)})
+}
+pairBtn.onclick=()=>{
+  mode='pair';
+  pairBtn.classList.add('active');singleBtn.classList.remove('active');
+  nameBWrap.style.display='block';
+  pairName.previousElementSibling.textContent='페어명';
+  activePreviewImage=images[0]?0:activePreviewImage;
+  syncNamesFromCharacters();updatePreviewEditor();drawCanvas();refreshText();
+}
+singleBtn.onclick=()=>{
+  mode='single';
+  singleBtn.classList.add('active');pairBtn.classList.remove('active');
+  nameBWrap.style.display='none';
+  pairName.previousElementSibling.textContent='캐릭터명';
+  activePreviewImage=0;
+  if(!pairNameTouched) pairName.value=nameA.value||'A';
+  if(!playlistTitleTouched) playlistTitleInput.value=nameA.value||'A';
+  updatePreviewEditor();drawCanvas();refreshText();
+}
+provider.onchange=()=>modelName.value=provider.value==='gemini'?'gemini-2.5-flash':'gpt-5-mini';
+['nameA','nameB'].forEach(id=>document.getElementById(id).oninput=()=>{syncNamesFromCharacters();drawCanvas();refreshText()});
+['mood','language','genre','count'].forEach(id=>document.getElementById(id).oninput=()=>{drawCanvas();refreshText()});
+
+function hexToRgba(hex,alpha){
+  const h=hex.replace('#','');
+  const v=h.length===3?h.split('').map(x=>x+x).join(''):h;
+  const n=parseInt(v,16);
+  return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${alpha})`;
+}
+function applyTheme(){
+  const light=themeMode.value==='light';
+  document.body.classList.toggle('light',light);
+  const color=accentColor.value;
+  document.documentElement.style.setProperty('--accent',color);
+  document.documentElement.style.setProperty('--accent-soft',hexToRgba(color,light?.14:.20));
+  accentHex.textContent=color.toLowerCase();
+  document.querySelectorAll('.swatch').forEach(s=>s.classList.toggle('active',s.dataset.color.toLowerCase()===color.toLowerCase()));
+}
+themeMode.addEventListener('change',applyTheme);
+accentColor.addEventListener('input',applyTheme);
+document.querySelectorAll('.swatch').forEach(s=>s.addEventListener('click',()=>{
+  accentColor.value=s.dataset.color;
+  applyTheme();
+}));
+
+
+function updateFontControls(){
+  fontSizeValue.textContent=Math.round(fontScale*100)+'%';
+  textOn.classList.toggle('active',textVisible);
+  textOff.classList.toggle('active',!textVisible);
+  drawCanvas();
+}
+textPreset.addEventListener('change',drawCanvas);
+textPosition.addEventListener('change',drawCanvas);
+catchphrase.addEventListener('input',drawCanvas);
+textOn.addEventListener('click',()=>{textVisible=true;updateFontControls()});
+textOff.addEventListener('click',()=>{textVisible=false;updateFontControls()});
+fontMinus.addEventListener('click',()=>{
+  fontScale=Math.max(.7,Math.round((fontScale-.1)*10)/10);
+  updateFontControls();
+});
+fontPlus.addEventListener('click',()=>{
+  fontScale=Math.min(1.4,Math.round((fontScale+.1)*10)/10);
+  updateFontControls();
+});
+
+function buildPrompt(){
+  return `첨부 이미지와 설명을 분석해 실제 존재하는 노래 ${count.value}곡을 추천해라.
+대상: ${mode==='pair'?(pairName.value||nameA.value+' × '+nameB.value):(pairName.value||nameA.value)}
+플레이리스트 제목: ${playlistTitleInput.value||pairName.value}
+관계와 서사: ${desc.value}
+분위기: ${mood.value}
+언어: ${language.value}
+장르: ${genre.value}
+첫 곡: ${firstSong.value||'없음'}
+지정곡이 있으면 반드시 1번에 배치하고, 설명 없이 JSON 배열만 출력한다.
+형식: [{"title":"곡 제목","artist":"가수"}]`
+}
+function imageParts(){return cropStates.filter(Boolean).map(s=>({data:s.src.split(',')[1],mime:(s.src.match(/^data:([^;]+);/)||[])[1]||'image/png'}))}
+function parseJSON(t){const c=t.replace(/```json|```/gi,'').trim(),a=c.indexOf('['),b=c.lastIndexOf(']');if(a<0||b<0)throw Error('곡 목록 JSON을 찾지 못했습니다.');return JSON.parse(c.slice(a,b+1)).map(x=>[x.title,x.artist])}
+
+async function callAI(){
+  const generatedPrompt=buildPrompt();
+  try{
+    await navigator.clipboard.writeText(generatedPrompt);
+    alert("프롬프트를 복사했습니다.\n새 탭에서 ChatGPT를 열겠습니다.\n추천 결과(JSON)를 복사해서 사이트에 붙여넣어 주세요.");
+  }catch(e){
+    window.prompt("복사가 차단되었습니다. 아래 프롬프트를 복사하세요.",generatedPrompt);
+  }
+  window.open("https://chatgpt.com/","_blank");
+}
+function applyResult(){
+  try{
+    const txt=document.getElementById('aiResult').value;
+    const arr=JSON.parse(txt).map(x=>[x.title,x.artist]);
+    generatedSongs=arr.slice(0,parseInt(count.value));
+    refreshText();
+    alert("플레이리스트를 적용했습니다.");
+  }catch(e){
+    alert("JSON 형식이 올바르지 않습니다.");
+  }
+}
+generateBtn.onclick=callAI;
+applyBtn.onclick=applyResult;
+
+function exportFullPNG(){
+  const songs=generatedSongs.length?generatedSongs:demo.slice(0,parseInt(count.value));
+  const light=themeMode.value==='light';
+  const accent=accentColor.value;
+  const C=light ? {
+    bg:'#ffffff', top:'#ffffff', text:'#0f0f0f', muted:'#606060',
+    line:'#d8d8d8', panel:'#f2f2f2', avatar:'#eeeeee',
+    action:'#ededed', subscribeText:'#ffffff'
+  } : {
+    bg:'#0f0f0f', top:'#0f0f0f', text:'#f1f1f1', muted:'#aaaaaa',
+    line:'#2a2a2a', panel:'#202020', avatar:'#080808',
+    action:'#272727', subscribeText:'#ffffff'
+  };
+
+  const W=1280;
+  const trackLine=42;
+  const headerH=1228;
+  const footerPad=90;
+  const H=headerH + songs.length*trackLine + footerPad;
+
+  const out=document.createElement('canvas');
+  out.width=W; out.height=H;
+  const c=out.getContext('2d');
+
+  c.fillStyle=C.bg; c.fillRect(0,0,W,H);
+
+  // top bar
+  c.fillStyle=C.top; c.fillRect(0,0,W,74);
+  c.strokeStyle=C.line; c.beginPath(); c.moveTo(0,73.5); c.lineTo(W,73.5); c.stroke();
+  c.fillStyle=C.text; c.font='700 26px Arial';
+  c.fillText('☰',36,46);
+  c.fillStyle=accent; c.fillText('▶',92,46);
+  c.fillStyle=C.text; c.fillText('YouTube',122,46);
+
+  c.fillStyle=C.panel; c.beginPath(); c.roundRect(360,16,540,42,22); c.fill();
+  c.strokeStyle=C.line; c.stroke();
+  c.fillStyle=C.muted; c.font='20px Arial'; c.fillText('검색',385,44);
+  c.fillStyle=C.text; c.font='22px Arial'; c.fillText('⌕',850,44);
+
+  // video
+  c.drawImage(canvas,70,105,1140,641);
+
+  const aName=nameA.value||'A', bName=nameB.value||'B';
+  const fallbackTitle=mode==='pair'?`${aName} × ${bName}`:aName;
+  const pageTitle=`[Playlist] ${(playlistTitleInput?.value||fallbackTitle).trim()}`;
+
+  c.fillStyle=C.text; c.font='700 34px Arial'; c.fillText(pageTitle,70,804);
+  c.fillStyle=C.muted; c.font='20px Arial'; c.fillText('조회수 142,785회 · 5개월 전',70,842);
+
+  // channel
+  c.strokeStyle=C.line; c.beginPath(); c.moveTo(70,875); c.lineTo(1210,875); c.stroke();
+  c.beginPath(); c.arc(105,925,31,0,Math.PI*2); c.fillStyle=C.avatar; c.fill(); c.strokeStyle=C.line; c.stroke();
+
+  c.font='700 23px Arial'; c.fillStyle=C.text; c.fillText('nnme_archive',155,914);
+  c.fillStyle=C.muted; c.font='17px Arial';
+  c.fillText('@nnme_archive · 구독자 8.7만명',155,940);
+  c.fillText('익명의 아카이브',155,963);
+
+  c.fillStyle=accent; c.beginPath(); c.roundRect(1030,902,145,48,24); c.fill();
+  c.fillStyle=C.subscribeText; c.font='700 19px Arial'; c.fillText('구독',1081,933);
+
+  // actions
+  const actions=[['👍 3.2천',70,100],['👎',180,60],['↗ 공유',250,92],['▣ 저장',352,92],['•••',454,62]];
+  c.font='18px Arial';
+  actions.forEach(([txt,x,w])=>{
+    c.fillStyle=C.action; c.beginPath(); c.roundRect(x,995,w,42,21); c.fill();
+    c.fillStyle=C.text; c.fillText(txt,x+16,1022);
+  });
+
+  // comments
+  c.strokeStyle=C.line; c.beginPath(); c.moveTo(70,1070); c.lineTo(1210,1070); c.stroke();
+  c.fillStyle=C.text; c.font='700 25px Arial'; c.fillText('댓글 127개',70,1115);
+
+  c.beginPath(); c.arc(105,1170,27,0,Math.PI*2); c.fillStyle=C.avatar; c.fill(); c.strokeStyle=C.line; c.stroke();
+
+  c.fillStyle=C.muted; c.font='16px Arial'; c.fillText('📌 고정됨',150,1155);
+  c.fillStyle=C.text; c.font='700 18px Arial'; c.fillText('nnme_archive',150,1182);
+  c.fillStyle=C.muted; c.font='16px Arial'; c.fillText('· 5개월 전',295,1182);
+
+  let y=1228, sec=0;
+  const pairLabel=(pairName?.value||fallbackTitle).trim();
+  if(pairLabel){
+    c.fillStyle=C.text; c.font='700 20px Arial'; c.fillText(pairLabel,150,y);
+    y+=48;
+  }
+  c.font='20px Arial';
+
+  songs.forEach((s,i)=>{
+    const m=Math.floor(sec/60), ss=String(sec%60).padStart(2,'0');
+    const stamp=`${String(m).padStart(2,'0')}:${ss}`;
+    c.fillStyle=accent; c.fillText(stamp,150,y);
+    c.fillStyle=C.text; c.fillText(`${s[0]} — ${s[1]}`,235,y);
+    sec+=220+(i%4)*27;
+    y+=trackLine;
+  });
+
+  c.fillStyle=C.muted; c.font='16px Arial';
+  c.fillText('좋아요 3.2천     답글 54개',150,y+22);
+
+  const link=document.createElement('a');
+  link.download=`pairlist-comment-${themeMode.value}-${accent.replace('#','')}.png`;
+  link.href=out.toDataURL('image/png');
+  link.click();
+}
+downloadBtn.onclick=exportFullPNG
+syncNamesFromCharacters();setupPreviewEditing();applyTheme();drawCanvas();refreshText();updatePreviewEditor();
+</script>
+</body>
+</html>
